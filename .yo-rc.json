@@ -1,0 +1,37 @@
+{
+  "generator-jhipster": {
+    "promptValues": {
+      "packageName": "com.roundrobine.movie.rentals"
+    },
+    "jhipsterVersion": "6.10.1",
+    "applicationType": "monolith",
+    "baseName": "videoRental",
+    "packageName": "com.roundrobine.movie.rentals",
+    "packageFolder": "com/roundrobine/movie/rentals",
+    "serverPort": "8080",
+    "authenticationType": "jwt",
+    "cacheProvider": "ehcache",
+    "enableHibernateCache": true,
+    "websocket": false,
+    "databaseType": "sql",
+    "devDatabaseType": "h2Disk",
+    "prodDatabaseType": "mysql",
+    "searchEngine": "elasticsearch",
+    "messageBroker": false,
+    "serviceDiscoveryType": false,
+    "buildTool": "maven",
+    "enableSwaggerCodegen": false,
+    "jwtSecretKey": "ZWRkYTg0ZmQ2YmMyYjIyYmI0ZmZjN2IyMjg0MzY4MDVjY2FjOWRlNGM1ZTIwZTNlMzlmNjE4N2Y3MjhlYjI2NDRlNDlkMGRmNzk5MzdkYzRjYmQ1NDdkNjEwYmFkOTEyOTVlZjk3ZGZjZjViNTFkNzU5ZDZmYjg2NGMxYzM2NTg=",
+    "embeddableLaunchScript": false,
+    "creationTimestamp": 1599428568770,
+    "testFrameworks": [],
+    "jhiPrefix": "jhi",
+    "entitySuffix": "",
+    "dtoSuffix": "DTO",
+    "otherModules": [],
+    "enableTranslation": false,
+    "clientPackageManager": "npm",
+    "blueprints": [],
+    "skipClient": true
+  }
+}
