@@ -14,7 +14,17 @@
     <property name="uuidType" value="varchar(36)" dbms="h2, mysql, mariadb"/>
 
     <include file="config/liquibase/changelog/00000000000000_initial_schema.xml" relativeToChangelogFile="false"/>
-    <!-- jhipster-needle-liquibase-add-changelog - JHipster will add liquibase changelogs here -->
-    <!-- jhipster-needle-liquibase-add-constraints-changelog - JHipster will add liquibase constraints changelogs here -->
-    <!-- jhipster-needle-liquibase-add-incremental-changelog - JHipster will add incremental liquibase changelogs here -->
+    <include file="config/liquibase/changelog/20200906222527_added_entity_Movie.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20200906222627_added_entity_MovieInventory.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20200906222727_added_entity_RentedCopy.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20200906222827_added_entity_RentalOrder.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20200906222927_added_entity_Customer.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20200906223027_added_entity_BonusHistory.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20200906222627_added_entity_constraints_MovieInventory.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20200906222727_added_entity_constraints_RentedCopy.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20200906222827_added_entity_constraints_RentalOrder.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20200906222927_added_entity_constraints_Customer.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20200906223027_added_entity_constraints_BonusHistory.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20200907182517_remove_first_and_last_name.xml" relativeToChangelogFile="false"/>
+
 </databaseChangeLog>
