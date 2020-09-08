@@ -48,7 +48,13 @@ public class CacheConfiguration {
             createCache(cm, com.roundrobine.movie.rentals.domain.User.class.getName());
             createCache(cm, com.roundrobine.movie.rentals.domain.Authority.class.getName());
             createCache(cm, com.roundrobine.movie.rentals.domain.User.class.getName() + ".authorities");
-            // jhipster-needle-ehcache-add-entry
+            createCache(cm, com.roundrobine.movie.rentals.domain.Movie.class.getName());
+            createCache(cm, com.roundrobine.movie.rentals.domain.MovieInventory.class.getName());
+            createCache(cm, com.roundrobine.movie.rentals.domain.RentedCopy.class.getName());
+            createCache(cm, com.roundrobine.movie.rentals.domain.RentalOrder.class.getName());
+            createCache(cm, com.roundrobine.movie.rentals.domain.RentalOrder.class.getName() + ".rentedCopies");
+            createCache(cm, com.roundrobine.movie.rentals.domain.Customer.class.getName());
+            createCache(cm, com.roundrobine.movie.rentals.domain.BonusHistory.class.getName());
         };
     }
 
