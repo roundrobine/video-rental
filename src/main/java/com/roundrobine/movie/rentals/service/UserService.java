@@ -2,9 +2,12 @@ package com.roundrobine.movie.rentals.service;
 
 import com.roundrobine.movie.rentals.config.Constants;
 import com.roundrobine.movie.rentals.domain.Authority;
+import com.roundrobine.movie.rentals.domain.Customer;
 import com.roundrobine.movie.rentals.domain.User;
 import com.roundrobine.movie.rentals.repository.AuthorityRepository;
+import com.roundrobine.movie.rentals.repository.CustomerRepository;
 import com.roundrobine.movie.rentals.repository.UserRepository;
+import com.roundrobine.movie.rentals.repository.search.CustomerSearchRepository;
 import com.roundrobine.movie.rentals.repository.search.UserSearchRepository;
 import com.roundrobine.movie.rentals.security.AuthoritiesConstants;
 import com.roundrobine.movie.rentals.security.SecurityUtils;
@@ -46,12 +49,23 @@ public class UserService {
 
     private final CacheManager cacheManager;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, UserSearchRepository userSearchRepository, AuthorityRepository authorityRepository, CacheManager cacheManager) {
+    private final CustomerRepository customerRepository;
+
+    private final CustomerSearchRepository customerSearchRepository;
+
+    private final String DEFAULT_PASSWORD = "passpass";
+
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder,
+                       UserSearchRepository userSearchRepository, AuthorityRepository authorityRepository,
+                       CacheManager cacheManager, CustomerRepository customerRepository,
+                       CustomerSearchRepository customerSearchRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.userSearchRepository = userSearchRepository;
         this.authorityRepository = authorityRepository;
         this.cacheManager = cacheManager;
+        this.customerRepository = customerRepository;
+        this.customerSearchRepository = customerSearchRepository;
     }
 
     public Optional<User> activateRegistration(String key) {
@@ -83,7 +97,7 @@ public class UserService {
 
     public Optional<User> requestPasswordReset(String mail) {
         return userRepository.findOneByEmailIgnoreCase(mail)
-            .filter(User::getActivated)
+            .filter(User::isActivated)
             .map(user -> {
                 user.setResetKey(RandomUtil.generateResetKey());
                 user.setResetDate(Instant.now());
@@ -92,6 +106,7 @@ public class UserService {
             });
     }
 
+    @Transactional
     public User registerUser(UserDTO userDTO, String password) {
         userRepository.findOneByLogin(userDTO.getLogin().toLowerCase()).ifPresent(existingUser -> {
             boolean removed = removeNonActivatedUser(existingUser);
@@ -128,19 +143,29 @@ public class UserService {
         userSearchRepository.save(newUser);
         this.clearUserCaches(newUser);
         log.debug("Created Information for User: {}", newUser);
+
+        // Create and save the Customer entity
+        Customer newUserExtra = new Customer();
+        newUserExtra.setUser(newUser);
+        customerRepository.save(newUserExtra);
+        customerSearchRepository.save(newUserExtra);
+        log.debug("Created Information for Customer: {}", newUserExtra);
         return newUser;
     }
 
-    private boolean removeNonActivatedUser(User existingUser) {
-        if (existingUser.getActivated()) {
-             return false;
+    @Transactional
+    public boolean removeNonActivatedUser(User existingUser) {
+        if (existingUser.isActivated()) {
+            return false;
         }
+        customerRepository.delete(Customer.builder().id(existingUser.getId()).build());
         userRepository.delete(existingUser);
         userRepository.flush();
         this.clearUserCaches(existingUser);
         return true;
     }
 
+    @Transactional
     public User createUser(UserDTO userDTO) {
         User user = new User();
         user.setLogin(userDTO.getLogin().toLowerCase());
@@ -155,7 +180,7 @@ public class UserService {
         } else {
             user.setLangKey(userDTO.getLangKey());
         }
-        String encryptedPassword = passwordEncoder.encode(RandomUtil.generatePassword());
+        String encryptedPassword = passwordEncoder.encode(DEFAULT_PASSWORD);
         user.setPassword(encryptedPassword);
         user.setResetKey(RandomUtil.generateResetKey());
         user.setResetDate(Instant.now());
@@ -170,6 +195,13 @@ public class UserService {
         }
         userRepository.save(user);
         userSearchRepository.save(user);
+
+        // Create and save the extra customer data entity
+        Customer newUserExtra = new Customer();
+        newUserExtra.setUser(user);
+        customerRepository.save(newUserExtra);
+        customerSearchRepository.save(newUserExtra);
+        log.debug("Created Information for Customer: {}", newUserExtra);
         this.clearUserCaches(user);
         log.debug("Created Information for User: {}", user);
         return user;
@@ -212,12 +244,15 @@ public class UserService {
             .map(UserDTO::new);
     }
 
+    @Transactional
     public void deleteUser(String login) {
         userRepository.findOneByLogin(login).ifPresent(user -> {
+            customerRepository.delete(Customer.builder().id(user.getId()).build());
+            customerSearchRepository.delete(Customer.builder().id(user.getId()).build());
             userRepository.delete(user);
             userSearchRepository.delete(user);
             this.clearUserCaches(user);
-            log.debug("Deleted User: {}", user);
+            log.debug("Deleted User with his customer information: {}", user);
         });
     }
 
@@ -292,6 +327,7 @@ public class UserService {
                 log.debug("Deleting not activated user {}", user.getLogin());
                 userRepository.delete(user);
                 userSearchRepository.delete(user);
+                customerRepository.delete(Customer.builder().id(user.getId()).build());
                 this.clearUserCaches(user);
             });
     }

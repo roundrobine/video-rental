@@ -29,8 +29,8 @@ spring:
     active: dev
     include:
       - swagger
-      # Uncomment to activate TLS for the dev profile
-      #- tls
+  # Uncomment to activate TLS for the dev profile
+  #- tls
   devtools:
     restart:
       enabled: true
@@ -50,15 +50,17 @@ spring:
       auto-commit: false
   h2:
     console:
-      enabled: false
+      enabled: true
   jpa:
     database-platform: io.github.jhipster.domain.util.FixedH2Dialect
     show-sql: true
   data:
-    elasticsearch:
-      properties:
-        path:
-          home: target/elasticsearch
+    jest:
+      uri: http://localhost:9200
+  #    elasticsearch:
+  #      properties:
+  #        path:
+  #          home: target/elasticsearch
   liquibase:
     # Remove 'faker' if you do not want the sample data to be loaded automatically
     contexts: dev, faker
