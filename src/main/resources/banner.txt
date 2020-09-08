@@ -6,5 +6,5 @@
   \_|  |_/ \___/   \_/  |_| \___| \_| \_| \___||_| |_| \__| \__,_||_| \_| |_/| .__/ | .__/
                                                                              | |    | |
                                                                              |_|    |_|
-                                                                             
+
 ${AnsiColor.BRIGHT_BLUE}:: Roundrobine 🤓  :: Running Spring Boot ${spring-boot.version} ::
