@@ -48,27 +48,6 @@ public class CustomerResource {
         this.customerService = customerService;
     }
 
-    /**
-     * {@code POST  /customers} : Create a new customer.
-     *
-     * @param customerDTO the customerDTO to create.
-     * @return the {@link ResponseEntity} with status {@code 201 (Created)} and with body the new customerDTO, or with status {@code 400 (Bad Request)} if the customer has already an ID.
-     * @throws URISyntaxException if the Location URI syntax is incorrect.
-     */
-    @PostMapping("/customers")
-    public ResponseEntity<CustomerDTO> createCustomer(@Valid @RequestBody CustomerDTO customerDTO) throws URISyntaxException {
-        log.debug("REST request to save Customer : {}", customerDTO);
-        if (customerDTO.getId() != null) {
-            throw new BadRequestAlertException("A new customer cannot already have an ID", ENTITY_NAME, "idexists");
-        }
-        if (Objects.isNull(customerDTO.getUser()) || customerDTO.getUser().getId() == null) {
-            throw new BadRequestAlertException("Invalid association value provided", ENTITY_NAME, "null");
-        }
-        CustomerDTO result = customerService.save(customerDTO);
-        return ResponseEntity.created(new URI("/api/customers/" + result.getId()))
-            .headers(HeaderUtil.createEntityCreationAlert(applicationName, false, ENTITY_NAME, result.getId().toString()))
-            .body(result);
-    }
 
     /**
      * {@code PUT  /customers} : Updates an existing customer.
@@ -84,6 +63,10 @@ public class CustomerResource {
         log.debug("REST request to update Customer : {}", customerDTO);
         if (customerDTO.getId() == null) {
             throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
+        }
+        if (customerDTO.getUser() != null && customerDTO.getUser().getId() != null
+            && customerDTO.getUser().getId() != customerDTO.getId()) {
+            throw new BadRequestAlertException("Not a valid customer, ids do not match", ENTITY_NAME, "idnonotmatch");
         }
         CustomerDTO result = customerService.save(customerDTO);
         return ResponseEntity.ok()
