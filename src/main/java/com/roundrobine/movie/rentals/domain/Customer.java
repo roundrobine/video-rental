@@ -32,17 +32,16 @@ public class Customer implements Serializable {
     private Long id;
 
     @Column(name = "bonus_points")
-    private Long bonusPoints;
+    private Long bonusPoints = 0l;
 
-    @Column(name = "credit_amount", precision = 21, scale = 2)
-    private BigDecimal creditAmount;
+    @Column(name = "credit_amount")
+    private BigDecimal creditAmount = new BigDecimal("1000.00");
 
     @Enumerated(EnumType.STRING)
     @Column(name = "currency")
-    private Currency currency;
+    private Currency currency = Currency.SEK;
 
     @OneToOne
-
     @MapsId
     @JoinColumn(name = "id")
     @With
