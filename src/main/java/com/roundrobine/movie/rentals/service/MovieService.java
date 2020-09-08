@@ -37,7 +37,8 @@ public class MovieService {
 
     private final MovieSearchRepository movieSearchRepository;
 
-    public MovieService(MovieRepository movieRepository, MovieMapper movieMapper, MovieSearchRepository movieSearchRepository) {
+    public MovieService(MovieRepository movieRepository, MovieMapper movieMapper,
+                        MovieSearchRepository movieSearchRepository) {
         this.movieRepository = movieRepository;
         this.movieMapper = movieMapper;
         this.movieSearchRepository = movieSearchRepository;
