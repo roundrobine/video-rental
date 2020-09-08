@@ -9,6 +9,7 @@ import com.roundrobine.movie.rentals.service.CustomerService;
 import com.roundrobine.movie.rentals.service.dto.CustomerDTO;
 import com.roundrobine.movie.rentals.service.mapper.CustomerMapper;
 
+import com.roundrobine.movie.rentals.web.rest.errors.BadRequestAlertException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -29,6 +30,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.elasticsearch.index.query.QueryBuilders.queryStringQuery;
 import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.Mockito.*;
@@ -127,58 +129,10 @@ public class CustomerResourceIT {
         customer = createEntity(em);
     }
 
-    @Test
-    @Transactional
-    public void createCustomer() throws Exception {
-        int databaseSizeBeforeCreate = customerRepository.findAll().size();
-        // Create the Customer
-        CustomerDTO customerDTO = customerMapper.toDto(customer);
-        restCustomerMockMvc.perform(post("/api/customers")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(TestUtil.convertObjectToJsonBytes(customerDTO)))
-            .andExpect(status().isCreated());
-
-        // Validate the Customer in the database
-        List<Customer> customerList = customerRepository.findAll();
-        assertThat(customerList).hasSize(databaseSizeBeforeCreate + 1);
-        Customer testCustomer = customerList.get(customerList.size() - 1);
-        assertThat(testCustomer.getBonusPoints()).isEqualTo(DEFAULT_BONUS_POINTS);
-        assertThat(testCustomer.getCreditAmount()).isEqualTo(DEFAULT_CREDIT_AMOUNT);
-        assertThat(testCustomer.getCurrency()).isEqualTo(DEFAULT_CURRENCY);
-
-        // Validate the id for MapsId, the ids must be same
-        assertThat(testCustomer.getId()).isEqualTo(testCustomer.getUser().getId());
-
-        // Validate the Customer in Elasticsearch
-        verify(mockCustomerSearchRepository, times(1)).save(testCustomer);
-    }
 
     @Test
     @Transactional
-    public void createCustomerWithExistingId() throws Exception {
-        int databaseSizeBeforeCreate = customerRepository.findAll().size();
-
-        // Create the Customer with an existing ID
-        customer.setId(1L);
-        CustomerDTO customerDTO = customerMapper.toDto(customer);
-
-        // An entity with an existing ID cannot be created, so this API call must fail
-        restCustomerMockMvc.perform(post("/api/customers")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(TestUtil.convertObjectToJsonBytes(customerDTO)))
-            .andExpect(status().isBadRequest());
-
-        // Validate the Customer in the database
-        List<Customer> customerList = customerRepository.findAll();
-        assertThat(customerList).hasSize(databaseSizeBeforeCreate);
-
-        // Validate the Customer in Elasticsearch
-        verify(mockCustomerSearchRepository, times(0)).save(customer);
-    }
-
-    @Test
-    @Transactional
-    public void updateCustomerMapsIdAssociationWithNewId() throws Exception {
+    public void throwExceptionWhenCustomerAndUserIdsDoNotMatch() throws Exception {
         // Initialize the database
         customerRepository.saveAndFlush(customer);
         int databaseSizeBeforeCreate = customerRepository.findAll().size();
@@ -189,6 +143,7 @@ public class CustomerResourceIT {
         em.flush();
 
         // Load the customer
+
         Customer updatedCustomer = customerRepository.findById(customer.getId()).get();
         // Disconnect from session so that the updates on updatedCustomer are not directly saved in db
         em.detach(updatedCustomer);
@@ -201,20 +156,8 @@ public class CustomerResourceIT {
         restCustomerMockMvc.perform(put("/api/customers")
             .contentType(MediaType.APPLICATION_JSON)
             .content(TestUtil.convertObjectToJsonBytes(updatedCustomerDTO)))
-            .andExpect(status().isOk());
+            .andExpect(status().isBadRequest());
 
-        // Validate the Customer in the database
-        List<Customer> customerList = customerRepository.findAll();
-        assertThat(customerList).hasSize(databaseSizeBeforeCreate);
-        Customer testCustomer = customerList.get(customerList.size() - 1);
-
-        // Validate the id for MapsId, the ids must be same
-        // Uncomment the following line for assertion. However, please note that there is a known issue and uncommenting will fail the test.
-        // Please look at https://github.com/jhipster/generator-jhipster/issues/9100. You can modify this test as necessary.
-        // assertThat(testCustomer.getId()).isEqualTo(testCustomer.getUser().getId());
-
-        // Validate the Customer in Elasticsearch
-        verify(mockCustomerSearchRepository, times(1)).save(customer);
     }
 
     @Test
