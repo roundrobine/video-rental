@@ -4,6 +4,9 @@
 
 - The application will have a fully functional CRUD api for all entities  from the domain model. 
   Please look at the actual ERP diagram I have created for this app.
+  
+  https://drive.google.com/file/d/1nponNGu74Idc46ilenu8Y6wGjgayXBpB/view?usp=sharing
+  
 - All api endpoints for the app are secured using JWTokens. 
   By default I use liquibase migration tool in combination with faker.js to seed some data in the H2 with disc persistence db on dev profile.
   H2 db will be populated with 4 users(customer) and 10 movies. Customer is just an extension to the user (one to one) relationship.
