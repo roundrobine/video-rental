@@ -1,10 +1,7 @@
 package com.roundrobine.movie.rentals.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
@@ -29,6 +26,7 @@ import com.roundrobine.movie.rentals.domain.enumeration.OrderStatus;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder(toBuilder = true)
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Entity
 @Table(name = "rental_order")
 @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
@@ -39,40 +37,50 @@ public class RentalOrder implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @Column(name = "late_charged_amount", precision = 21, scale = 2)
-    private BigDecimal lateChargedAmount;
+    @Builder.Default
+    private BigDecimal lateChargedAmount = new BigDecimal("0");;
 
     @NotNull
     @Column(name = "total_amount", precision = 21, scale = 2, nullable = false)
-    private BigDecimal totalAmount;
+    @Builder.Default
+    private BigDecimal totalAmount = new BigDecimal("0");
 
     @NotNull
     @Enumerated(EnumType.STRING)
     @Column(name = "curency", nullable = false)
+    @EqualsAndHashCode.Include
     private Currency currency;
 
     @NotNull
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private OrderStatus status;
+    @Builder.Default
+    @EqualsAndHashCode.Include
+    private OrderStatus status = OrderStatus.NEW;
 
     @NotNull
     @Column(name = "last_updated_at", nullable = false)
+    @Builder.Default
     private Instant lastUpdatedAt = Instant.now();
 
     @NotNull
     @Column(name = "created_at", nullable = false)
+    @Builder.Default
     private Instant createdAt = Instant.now();
 
     @OneToMany(mappedBy = "order")
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
+    @ToString.Exclude
     private Set<RentedCopy> rentedCopies = new HashSet<>();
 
     @ManyToOne(optional = false)
     @NotNull
     @JsonIgnoreProperties(value = "rentalOrders", allowSetters = true)
+    @EqualsAndHashCode.Include
     private Customer customer;
 
 }

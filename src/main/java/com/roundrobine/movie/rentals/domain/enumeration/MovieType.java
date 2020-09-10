@@ -28,7 +28,7 @@ public enum MovieType {
         this.bonusPoints = bonusPoints;
     }
 
-    public BigDecimal calculateMoviePriceOnRenatal(int plannedRentalDays) {
+    public BigDecimal calculateMoviePriceOnRental(int plannedRentalDays) {
         BigDecimal total = this.price;
         if (plannedRentalDays > includedRentalDays) {
             total = total.add(this.price.multiply(new BigDecimal(plannedRentalDays - includedRentalDays)));
@@ -46,11 +46,15 @@ public enum MovieType {
             if(actualRentalDays <= includedRentalDays){
                 return surcharges;
             }
-            return surcharges.add(this.price.multiply(new BigDecimal(actualRentalDays - includedRentalDays )));
+            return surcharges.add(this.price.multiply(new BigDecimal(actualRentalDays - plannedRentalDays )));
         }
     }
 
     public int getBonusPoints() {
         return bonusPoints;
+    }
+
+    public BigDecimal getPrice(){
+        return price;
     }
 }

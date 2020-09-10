@@ -53,6 +53,20 @@ public class BonusHistoryService {
         return result;
     }
 
+
+    /**
+     * Save a bonusHistory.
+     *
+     * @param bonusHistory the entity to save.
+     * @return the persisted entity.
+     */
+    public BonusHistory save(BonusHistory bonusHistory) {
+        log.debug("Request to save BonusHistory : {}", bonusHistory);
+        bonusHistory = bonusHistoryRepository.save(bonusHistory);
+        bonusHistorySearchRepository.save(bonusHistory);
+        return bonusHistory;
+    }
+
     /**
      * Get all the bonusHistories.
      *

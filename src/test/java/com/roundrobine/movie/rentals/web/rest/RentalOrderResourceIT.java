@@ -148,31 +148,6 @@ public class RentalOrderResourceIT {
         rentalOrder = createEntity(em);
     }
 
-    @Test
-    @Transactional
-    public void createRentalOrder() throws Exception {
-        int databaseSizeBeforeCreate = rentalOrderRepository.findAll().size();
-        // Create the RentalOrder
-        RentalOrderDTO rentalOrderDTO = rentalOrderMapper.toDto(rentalOrder);
-        restRentalOrderMockMvc.perform(post("/api/rental-orders")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(TestUtil.convertObjectToJsonBytes(rentalOrderDTO)))
-            .andExpect(status().isCreated());
-
-        // Validate the RentalOrder in the database
-        List<RentalOrder> rentalOrderList = rentalOrderRepository.findAll();
-        assertThat(rentalOrderList).hasSize(databaseSizeBeforeCreate + 1);
-        RentalOrder testRentalOrder = rentalOrderList.get(rentalOrderList.size() - 1);
-        assertThat(testRentalOrder.getLateChargedAmount()).isEqualTo(DEFAULT_LATE_CHARGED_AMOUNT);
-        assertThat(testRentalOrder.getTotalAmount()).isEqualTo(DEFAULT_TOTAL_AMOUNT);
-        assertThat(testRentalOrder.getCurrency()).isEqualTo(DEFAULT_CURENCY);
-        assertThat(testRentalOrder.getStatus()).isEqualTo(DEFAULT_STATUS);
-        assertThat(testRentalOrder.getLastUpdatedAt()).isEqualTo(DEFAULT_LAST_UPDATED_AT);
-        assertThat(testRentalOrder.getCreatedAt()).isEqualTo(DEFAULT_CREATED_AT);
-
-        // Validate the RentalOrder in Elasticsearch
-        verify(mockRentalOrderSearchRepository, times(1)).save(testRentalOrder);
-    }
 
     @Test
     @Transactional
@@ -258,39 +233,7 @@ public class RentalOrderResourceIT {
         assertThat(rentalOrderList).hasSize(databaseSizeBeforeTest);
     }
 
-    @Test
-    @Transactional
-    public void checkLastUpdatedAtAlwaysSet() throws Exception {
-        int databaseSizeBeforeTest = rentalOrderRepository.findAll().size();
-        // set the field null
-        rentalOrder.setLastUpdatedAt(null);
 
-        // Create the RentalOrder, which fails.
-        RentalOrderDTO rentalOrderDTO = rentalOrderMapper.toDto(rentalOrder);
-
-
-        restRentalOrderMockMvc.perform(post("/api/rental-orders")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(TestUtil.convertObjectToJsonBytes(rentalOrderDTO)))
-            .andExpect(status().isCreated());
-    }
-
-    @Test
-    @Transactional
-    public void checkCreatedAtIsAlwaysSet() throws Exception {
-        int databaseSizeBeforeTest = rentalOrderRepository.findAll().size();
-        // set the field null
-        rentalOrder.setCreatedAt(null);
-
-        // Create the RentalOrder, which fails.
-        RentalOrderDTO rentalOrderDTO = rentalOrderMapper.toDto(rentalOrder);
-
-
-        restRentalOrderMockMvc.perform(post("/api/rental-orders")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(TestUtil.convertObjectToJsonBytes(rentalOrderDTO)))
-            .andExpect(status().isCreated());
-    }
 
     @Test
     @Transactional
@@ -337,68 +280,6 @@ public class RentalOrderResourceIT {
             .andExpect(status().isNotFound());
     }
 
-    @Test
-    @Transactional
-    public void updateRentalOrder() throws Exception {
-        // Initialize the database
-        rentalOrderRepository.saveAndFlush(rentalOrder);
-
-        int databaseSizeBeforeUpdate = rentalOrderRepository.findAll().size();
-
-        // Update the rentalOrder
-        RentalOrder updatedRentalOrder = rentalOrderRepository.findById(rentalOrder.getId()).get();
-        // Disconnect from session so that the updates on updatedRentalOrder are not directly saved in db
-        em.detach(updatedRentalOrder);
-        updatedRentalOrder = updatedRentalOrder.toBuilder()
-            .lateChargedAmount(UPDATED_LATE_CHARGED_AMOUNT)
-            .totalAmount(UPDATED_TOTAL_AMOUNT)
-            .currency(UPDATED_CURENCY)
-            .status(UPDATED_STATUS)
-            .lastUpdatedAt(UPDATED_LAST_UPDATED_AT)
-            .createdAt(UPDATED_CREATED_AT).build();
-        RentalOrderDTO rentalOrderDTO = rentalOrderMapper.toDto(updatedRentalOrder);
-
-        restRentalOrderMockMvc.perform(put("/api/rental-orders")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(TestUtil.convertObjectToJsonBytes(rentalOrderDTO)))
-            .andExpect(status().isOk());
-
-        // Validate the RentalOrder in the database
-        List<RentalOrder> rentalOrderList = rentalOrderRepository.findAll();
-        assertThat(rentalOrderList).hasSize(databaseSizeBeforeUpdate);
-        RentalOrder testRentalOrder = rentalOrderList.get(rentalOrderList.size() - 1);
-        assertThat(testRentalOrder.getLateChargedAmount()).isEqualTo(UPDATED_LATE_CHARGED_AMOUNT);
-        assertThat(testRentalOrder.getTotalAmount()).isEqualTo(UPDATED_TOTAL_AMOUNT);
-        assertThat(testRentalOrder.getCurrency()).isEqualTo(UPDATED_CURENCY);
-        assertThat(testRentalOrder.getStatus()).isEqualTo(UPDATED_STATUS);
-        assertThat(testRentalOrder.getLastUpdatedAt()).isEqualTo(UPDATED_LAST_UPDATED_AT);
-        assertThat(testRentalOrder.getCreatedAt()).isEqualTo(UPDATED_CREATED_AT);
-
-        // Validate the RentalOrder in Elasticsearch
-        verify(mockRentalOrderSearchRepository, times(1)).save(testRentalOrder);
-    }
-
-    @Test
-    @Transactional
-    public void updateNonExistingRentalOrder() throws Exception {
-        int databaseSizeBeforeUpdate = rentalOrderRepository.findAll().size();
-
-        // Create the RentalOrder
-        RentalOrderDTO rentalOrderDTO = rentalOrderMapper.toDto(rentalOrder);
-
-        // If the entity doesn't have an ID, it will throw BadRequestAlertException
-        restRentalOrderMockMvc.perform(put("/api/rental-orders")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(TestUtil.convertObjectToJsonBytes(rentalOrderDTO)))
-            .andExpect(status().isBadRequest());
-
-        // Validate the RentalOrder in the database
-        List<RentalOrder> rentalOrderList = rentalOrderRepository.findAll();
-        assertThat(rentalOrderList).hasSize(databaseSizeBeforeUpdate);
-
-        // Validate the RentalOrder in Elasticsearch
-        verify(mockRentalOrderSearchRepository, times(0)).save(rentalOrder);
-    }
 
     @Test
     @Transactional
