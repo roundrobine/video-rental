@@ -216,9 +216,21 @@ public class RentalOrderService {
         List<RentedCopy> copiesToReturn = rentedCopyService
             .findByMovieInventoryIdIn(new HashSet<>(returnRentedMoviesDTO.getMovieInventoryIds()));
 
-        validateRetunedMoviesWithCustomer(customer, copiesToReturn);
+        validateReturnedMoviesWithCustomer(customer, copiesToReturn);
 
-        Set<RentalOrder> rentalOrders = new HashSet<>();
+        copiesToReturn = copiesToReturn.stream()
+            .filter(copy -> copy.getReturnDate() == null)
+            .collect(Collectors.toList());
+
+        if(copiesToReturn.isEmpty()){
+            throw new BadRequestAlertException("No movies currently rented by this customer!",
+                ORDER_RENTAL_SERVICE, "customernotvalid");
+        }
+
+        Set<Long> rentalOrderIds =
+            copiesToReturn.stream().map(copy -> copy.getOrder().getId()).collect(Collectors.toSet());
+
+        List<RentalOrder> rentalOrders = rentalOrderRepository.findByIdIn(rentalOrderIds);
 
         // Customer may return movies that belong to different orders at once so we need to
         // accumulate the total surcharges to pay across all orders;
@@ -234,13 +246,19 @@ public class RentalOrderService {
             copy.setExtraChargedDays(surcharges
                 .divide(copy.getMovieInventory().getMovie().getType().getPrice()).intValue());
 
-            copy.getOrder()
-                .setLateChargedAmount(copy.getOrder().getLateChargedAmount().add(surcharges));
-            copy.getOrder().setTotalAmount(copy.getOrder().getTotalAmount().add(copy.getOrder().getLateChargedAmount()));
-            copy.getOrder().setLastUpdatedAt(Instant.now());
-            totalSurchargesAmountToPay = totalSurchargesAmountToPay.add(copy.getOrder().getLateChargedAmount());
+            rentalOrders = rentalOrders.stream()
+                .map(rentalOrder -> {
+                    if(rentalOrder.getId() == copy.getOrder().getId()){
+                        rentalOrder.setLateChargedAmount(copy.getOrder().getLateChargedAmount().add(surcharges));
+                        rentalOrder.setTotalAmount(copy.getOrder().getTotalAmount()
+                            .add(surcharges));
+                        rentalOrder.setLastUpdatedAt(Instant.now());
+                    }
+                    return rentalOrder;
+                }).collect(Collectors.toList());
 
-            rentalOrders.add(copy.getOrder());
+
+            totalSurchargesAmountToPay = totalSurchargesAmountToPay.add(surcharges);
 
         }
 
@@ -330,7 +348,6 @@ public class RentalOrderService {
     private Customer lookForCustomer(User user){
         log.debug("Look for the customer attached to specific user");
         Optional<Customer> customerOpt = customerService.findOneInternal(user.getId());
-        Customer customer;
         if(!customerOpt.isPresent()){
             throw new BadRequestAlertException("Customer with this id does not exists!",
                 ORDER_RENTAL_SERVICE, "customernotvalid");
@@ -340,7 +357,7 @@ public class RentalOrderService {
     }
 
 
-    private boolean validateRetunedMoviesWithCustomer(Customer customer, List<RentedCopy> copies){
+    private boolean validateReturnedMoviesWithCustomer(Customer customer, List<RentedCopy> copies){
 
             if(!copies.stream().allMatch(copy -> copy.getOrder().getCustomer().getId() == customer.getId()))   {
                 throw new BadRequestAlertException("Some of the returned movies does not belong to the specific customer",

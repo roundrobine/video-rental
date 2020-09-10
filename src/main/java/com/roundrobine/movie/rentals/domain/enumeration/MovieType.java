@@ -46,7 +46,7 @@ public enum MovieType {
             if(actualRentalDays <= includedRentalDays){
                 return surcharges;
             }
-            return surcharges.add(this.price.multiply(new BigDecimal(actualRentalDays - includedRentalDays )));
+            return surcharges.add(this.price.multiply(new BigDecimal(actualRentalDays - plannedRentalDays )));
         }
     }
 

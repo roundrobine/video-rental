@@ -79,7 +79,8 @@ public class RentalOrderResource {
     }
 
     /**
-     * {@code PUT  /rental-orders/return} : Update affected rental orders by returned copies
+     * {@code PUT  /rental-orders/return} : Update affected rental orders, inventory, movie copies and customer
+     * with returned copies
      *
      * @param returnRentedMoviesDTO the list of movie copies to update.
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated rentalOrderDTO,
