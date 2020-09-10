@@ -36,10 +36,12 @@ public class BonusHistory implements Serializable {
 
     @NotNull
     @Column(name = "points", nullable = false)
+    @Builder.Default
     private Long points = 0l;
 
     @NotNull
     @Column(name = "created_at", nullable = false)
+    @Builder.Default
     private Instant createdAt = Instant.now();
 
     @ManyToOne(optional = false)

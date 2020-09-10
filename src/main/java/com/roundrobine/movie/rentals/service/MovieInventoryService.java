@@ -15,7 +15,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.elasticsearch.index.query.QueryBuilders.*;
 
@@ -56,6 +58,20 @@ public class MovieInventoryService {
         return result;
     }
 
+
+    /**
+     * Save a list of movieInventory.
+     *
+     * @param movieInventoryList the entity to save.
+     * @return the persisted entity.
+     */
+    public boolean saveAll(List<MovieInventory> movieInventoryList) {
+        log.debug("Request to save a list of MovieInventory : {}", movieInventoryList);
+        movieInventoryRepository.saveAll(movieInventoryList);
+        movieInventorySearchRepository.saveAll(movieInventoryList);
+        return true;
+    }
+
     /**
      * Get all the movieInventories.
      *
@@ -71,7 +87,7 @@ public class MovieInventoryService {
 
 
     /**
-     * Get one movieInventory by id.
+     * Get one movieInventory DTO by id.
      *
      * @param id the id of the entity.
      * @return the entity.
@@ -81,6 +97,32 @@ public class MovieInventoryService {
         log.debug("Request to get MovieInventory : {}", id);
         return movieInventoryRepository.findById(id)
             .map(movieInventoryMapper::toDto);
+    }
+
+
+    /**
+     * Get one movieInventory by id.
+     *
+     * @param id the id of the entity.
+     * @return the entity.
+     */
+    @Transactional(readOnly = true)
+    public Optional<MovieInventory> findOneInternal(Long id) {
+        log.debug("Request to get MovieInventory : {}", id);
+        return movieInventoryRepository.findById(id);
+    }
+
+
+    /**
+     * Get all movieInventories by list of matching ids.
+     *
+     * @param  ids  the pagination information.
+     * @return the list of entities.
+     */
+    @Transactional(readOnly = true)
+    public List<MovieInventory> findByIdIn(Set<Long> ids) {
+        log.debug("Request to get all MovieInventories by passing a list of matching ids");
+        return movieInventoryRepository.findByIdIn(ids);
     }
 
     /**
@@ -108,10 +150,13 @@ public class MovieInventoryService {
             .map(movieInventoryMapper::toDto);
     }
 
+
+
+
     /**
      * Read all media entities and refresh the data in elastic search
      */
-    @Scheduled(fixedDelay = 50000)
+    @Scheduled(fixedDelay = 500000)
     public void refreshSearchRepo() {
         this.movieInventoryRepository.findAll()
             .forEach(m -> this.movieInventorySearchRepository.save(m));
