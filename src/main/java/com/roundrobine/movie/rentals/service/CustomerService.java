@@ -14,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 
 import static org.elasticsearch.index.query.QueryBuilders.*;
@@ -35,7 +36,8 @@ public class CustomerService {
 
     private final UserRepository userRepository;
 
-    public CustomerService(CustomerRepository customerRepository, CustomerMapper customerMapper, CustomerSearchRepository customerSearchRepository, UserRepository userRepository) {
+    public CustomerService(CustomerRepository customerRepository, CustomerMapper customerMapper,
+                           CustomerSearchRepository customerSearchRepository, UserRepository userRepository) {
         this.customerRepository = customerRepository;
         this.customerMapper = customerMapper;
         this.customerSearchRepository = customerSearchRepository;
@@ -59,6 +61,20 @@ public class CustomerService {
         return result;
     }
 
+
+    /**
+     * Save a customer.
+     *
+     * @param customer the entity to save.
+     * @return the persisted entity.
+     */
+    public Customer saveInternal(Customer customer) {
+        log.debug("Request to save Customer internal call: {}", customer);
+        customer = customerRepository.save(customer);
+        customerSearchRepository.save(customer);
+        return customer;
+    }
+
     /**
      * Get all the customers.
      *
@@ -70,6 +86,19 @@ public class CustomerService {
         log.debug("Request to get all Customers");
         return customerRepository.findAll(pageable)
             .map(customerMapper::toDto);
+    }
+
+
+    /**
+     * Get one customer by id.
+     *
+     * @param id the id of the entity.
+     * @return the entity.
+     */
+    @Transactional(readOnly = true)
+    public Optional<Customer> findOneInternal(Long id) {
+        log.debug("Request to get Customer from internal call: {}", id);
+        return customerRepository.findById(id);
     }
 
 
@@ -109,5 +138,9 @@ public class CustomerService {
         log.debug("Request to search for a page of Customers for query {}", query);
         return customerSearchRepository.search(queryStringQuery(query), pageable)
             .map(customerMapper::toDto);
+    }
+
+    public boolean isCustomerAbleToPay(Customer customer, BigDecimal amount) {
+        return !(customer.getCreditAmount().compareTo(amount) == -1);
     }
 }

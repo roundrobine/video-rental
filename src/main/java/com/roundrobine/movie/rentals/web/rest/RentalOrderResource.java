@@ -1,6 +1,9 @@
 package com.roundrobine.movie.rentals.web.rest;
 
+import com.roundrobine.movie.rentals.domain.User;
 import com.roundrobine.movie.rentals.service.RentalOrderService;
+import com.roundrobine.movie.rentals.service.UserService;
+import com.roundrobine.movie.rentals.service.dto.CreateRentalOrderDTO;
 import com.roundrobine.movie.rentals.web.rest.errors.BadRequestAlertException;
 import com.roundrobine.movie.rentals.service.dto.RentalOrderDTO;
 
@@ -42,25 +45,34 @@ public class RentalOrderResource {
     private String applicationName;
 
     private final RentalOrderService rentalOrderService;
+    private final UserService userService;
 
-    public RentalOrderResource(RentalOrderService rentalOrderService) {
+    public RentalOrderResource(RentalOrderService rentalOrderService, UserService userService) {
         this.rentalOrderService = rentalOrderService;
+        this.userService = userService;
     }
+
 
     /**
      * {@code POST  /rental-orders} : Create a new rentalOrder.
      *
-     * @param rentalOrderDTO the rentalOrderDTO to create.
-     * @return the {@link ResponseEntity} with status {@code 201 (Created)} and with body the new rentalOrderDTO, or with status {@code 400 (Bad Request)} if the rentalOrder has already an ID.
+     * @param createRentalOrderDTO the rentalOrderDTO to create.
+     * @return the {@link ResponseEntity} with status {@code 201 (Created)} and with body the new rentalOrderDTO, or
+     * with status {@code 400 (Bad Request)} if the rentalOrder can not be created
      * @throws URISyntaxException if the Location URI syntax is incorrect.
      */
     @PostMapping("/rental-orders")
-    public ResponseEntity<RentalOrderDTO> createRentalOrder(@Valid @RequestBody RentalOrderDTO rentalOrderDTO) throws URISyntaxException {
-        log.debug("REST request to save RentalOrder : {}", rentalOrderDTO);
-        if (rentalOrderDTO.getId() != null) {
-            throw new BadRequestAlertException("A new rentalOrder cannot already have an ID", ENTITY_NAME, "idexists");
+    public ResponseEntity<RentalOrderDTO> createRentalOrder(@Valid @RequestBody CreateRentalOrderDTO createRentalOrderDTO)
+        throws URISyntaxException {
+        log.debug("REST request to create a full RentalOrder : {}", createRentalOrderDTO);
+
+        final Optional<User> isUser = userService.getUserWithAuthorities();
+        if(!isUser.isPresent()) {
+            log.error("User is not logged in");
+            throw new BadRequestAlertException("User does not exist!", ENTITY_NAME, "userunavailable");
         }
-        RentalOrderDTO result = rentalOrderService.save(rentalOrderDTO);
+
+        RentalOrderDTO result = rentalOrderService.processRentalOrder(isUser.get(),createRentalOrderDTO);
         return ResponseEntity.created(new URI("/api/rental-orders/" + result.getId()))
             .headers(HeaderUtil.createEntityCreationAlert(applicationName, false, ENTITY_NAME, result.getId().toString()))
             .body(result);

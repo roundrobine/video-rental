@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.elasticsearch.index.query.QueryBuilders.*;
@@ -32,7 +33,8 @@ public class RentedCopyService {
 
     private final RentedCopySearchRepository rentedCopySearchRepository;
 
-    public RentedCopyService(RentedCopyRepository rentedCopyRepository, RentedCopyMapper rentedCopyMapper, RentedCopySearchRepository rentedCopySearchRepository) {
+    public RentedCopyService(RentedCopyRepository rentedCopyRepository, RentedCopyMapper rentedCopyMapper,
+                             RentedCopySearchRepository rentedCopySearchRepository) {
         this.rentedCopyRepository = rentedCopyRepository;
         this.rentedCopyMapper = rentedCopyMapper;
         this.rentedCopySearchRepository = rentedCopySearchRepository;
@@ -51,6 +53,35 @@ public class RentedCopyService {
         RentedCopyDTO result = rentedCopyMapper.toDto(rentedCopy);
         rentedCopySearchRepository.save(rentedCopy);
         return result;
+    }
+
+
+    /**
+     * Save a rentedCopy.
+     *
+     * @param rentedCopy the entity to save.
+     * @return the persisted entity.
+     */
+    public RentedCopy save(RentedCopy rentedCopy) {
+        log.debug("Request to save RentedCopy from internal call: {}", rentedCopy);
+        rentedCopy = rentedCopyRepository.save(rentedCopy);
+        rentedCopySearchRepository.save(rentedCopy);
+        return rentedCopy;
+    }
+
+
+
+    /**
+     * Save a list of rental copies rentedCopy.
+     *
+     * @param rentedCopyList the entity to save.
+     * @return the persisted entity.
+     */
+    public List<RentedCopy> saveAll(List<RentedCopy> rentedCopyList) {
+        log.debug("Request to save a list of RentedCopies: {}", rentedCopyList);
+        rentedCopyList = rentedCopyRepository.saveAll(rentedCopyList);
+        rentedCopySearchRepository.saveAll(rentedCopyList);
+        return rentedCopyList;
     }
 
     /**
@@ -79,6 +110,20 @@ public class RentedCopyService {
         return rentedCopyRepository.findById(id)
             .map(rentedCopyMapper::toDto);
     }
+
+
+    /**
+     * Get one rentedCopy by id.
+     *
+     * @param id the id of the entity.
+     * @return the entity.
+     */
+    @Transactional(readOnly = true)
+    public Optional<RentedCopy> findOneInternal(Long id) {
+        log.debug("Request to get RentedCopy internal call: {}", id);
+        return rentedCopyRepository.findById(id);
+    }
+
 
     /**
      * Delete the rentedCopy by id.
