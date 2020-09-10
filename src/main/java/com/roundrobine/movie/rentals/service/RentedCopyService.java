@@ -1,5 +1,6 @@
 package com.roundrobine.movie.rentals.service;
 
+import com.roundrobine.movie.rentals.domain.MovieInventory;
 import com.roundrobine.movie.rentals.domain.RentedCopy;
 import com.roundrobine.movie.rentals.repository.RentedCopyRepository;
 import com.roundrobine.movie.rentals.repository.search.RentedCopySearchRepository;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.elasticsearch.index.query.QueryBuilders.*;
 
@@ -109,6 +111,19 @@ public class RentedCopyService {
         log.debug("Request to get RentedCopy : {}", id);
         return rentedCopyRepository.findById(id)
             .map(rentedCopyMapper::toDto);
+    }
+
+
+    /**
+     * Get all rentedCopies by list of matching movie inventoryIds ids.
+     *
+     * @param  ids  the pagination information.
+     * @return the list of entities.
+     */
+    @Transactional(readOnly = true)
+    public List<RentedCopy> findByMovieInventoryIdIn(Set<Long> ids) {
+        log.debug("Request to get all RentedCopies by passing a list of matching ids");
+        return rentedCopyRepository.findByMovieInventoryIdIn(ids);
     }
 
 

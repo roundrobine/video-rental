@@ -4,6 +4,7 @@ import com.roundrobine.movie.rentals.domain.User;
 import com.roundrobine.movie.rentals.service.RentalOrderService;
 import com.roundrobine.movie.rentals.service.UserService;
 import com.roundrobine.movie.rentals.service.dto.CreateRentalOrderDTO;
+import com.roundrobine.movie.rentals.service.dto.ReturnRentedMovieDTO;
 import com.roundrobine.movie.rentals.web.rest.errors.BadRequestAlertException;
 import com.roundrobine.movie.rentals.service.dto.RentalOrderDTO;
 
@@ -59,7 +60,6 @@ public class RentalOrderResource {
      * @param createRentalOrderDTO the rentalOrderDTO to create.
      * @return the {@link ResponseEntity} with status {@code 201 (Created)} and with body the new rentalOrderDTO, or
      * with status {@code 400 (Bad Request)} if the rentalOrder can not be created
-     * @throws URISyntaxException if the Location URI syntax is incorrect.
      */
     @PostMapping("/rental-orders")
     public ResponseEntity<RentalOrderDTO> createRentalOrder(@Valid @RequestBody CreateRentalOrderDTO createRentalOrderDTO)
@@ -79,23 +79,25 @@ public class RentalOrderResource {
     }
 
     /**
-     * {@code PUT  /rental-orders} : Updates an existing rentalOrder.
+     * {@code PUT  /rental-orders/return} : Update affected rental orders by returned copies
      *
-     * @param rentalOrderDTO the rentalOrderDTO to update.
+     * @param returnRentedMoviesDTO the list of movie copies to update.
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated rentalOrderDTO,
      * or with status {@code 400 (Bad Request)} if the rentalOrderDTO is not valid,
      * or with status {@code 500 (Internal Server Error)} if the rentalOrderDTO couldn't be updated.
-     * @throws URISyntaxException if the Location URI syntax is incorrect.
      */
-    @PutMapping("/rental-orders")
-    public ResponseEntity<RentalOrderDTO> updateRentalOrder(@Valid @RequestBody RentalOrderDTO rentalOrderDTO) throws URISyntaxException {
-        log.debug("REST request to update RentalOrder : {}", rentalOrderDTO);
-        if (rentalOrderDTO.getId() == null) {
-            throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
+    @PutMapping("/rental-orders/return")
+    public ResponseEntity<List<RentalOrderDTO>> returnRentedMovies(@Valid @RequestBody ReturnRentedMovieDTO returnRentedMoviesDTO){
+        log.debug("REST request to return copies of movies related to one or many  RentalOrders : {}", returnRentedMoviesDTO);
+
+        final Optional<User> isUser = userService.getUserWithAuthorities();
+        if(!isUser.isPresent()) {
+            log.error("User is not logged in");
+            throw new BadRequestAlertException("User does not exist!", ENTITY_NAME, "userunavailable");
         }
-        RentalOrderDTO result = rentalOrderService.save(rentalOrderDTO);
+
+        List<RentalOrderDTO> result = rentalOrderService.returnRentedMovieCopies(isUser.get(), returnRentedMoviesDTO);
         return ResponseEntity.ok()
-            .headers(HeaderUtil.createEntityUpdateAlert(applicationName, false, ENTITY_NAME, rentalOrderDTO.getId().toString()))
             .body(result);
     }
 

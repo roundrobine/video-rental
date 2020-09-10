@@ -53,4 +53,8 @@ public enum MovieType {
     public int getBonusPoints() {
         return bonusPoints;
     }
+
+    public BigDecimal getPrice(){
+        return price;
+    }
 }

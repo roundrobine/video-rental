@@ -8,6 +8,7 @@ import com.roundrobine.movie.rentals.repository.RentalOrderRepository;
 import com.roundrobine.movie.rentals.repository.search.RentalOrderSearchRepository;
 import com.roundrobine.movie.rentals.service.dto.CreateRentalOrderDTO;
 import com.roundrobine.movie.rentals.service.dto.RentalOrderDTO;
+import com.roundrobine.movie.rentals.service.dto.ReturnRentedMovieDTO;
 import com.roundrobine.movie.rentals.service.mapper.RentalOrderMapper;
 import com.roundrobine.movie.rentals.web.rest.errors.BadRequestAlertException;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +17,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -43,6 +46,8 @@ public class RentalOrderService {
     private final RentedCopyService rentedCopyService;
 
     private final BonusHistoryService bonusHistoryService;
+
+    public static final String ORDER_RENTAL_SERVICE = "OrderRentalService";
 
 
     public RentalOrderService(RentalOrderRepository rentalOrderRepository, RentalOrderMapper rentalOrderMapper,
@@ -129,18 +134,14 @@ public class RentalOrderService {
     @Transactional
     public RentalOrderDTO processRentalOrder(User user, CreateRentalOrderDTO createRentalOrderDTO){
 
+            log.debug("Start processing new rental order {}", createRentalOrderDTO);
+
              List<MovieInventory> moviesToRent = validateAndGetMovieInventoryList(createRentalOrderDTO);
              List<MovieInventory> rentedMovies = new ArrayList<>();
 
-            Optional<Customer> customerOpt = customerService.findOneInternal(user.getId());
-            Customer customer;
-            if(!customerOpt.isPresent()){
-                throw new BadRequestAlertException("Customer with this id does not exists!",
-                    "OrderRentalService", "customernotvalid");
-            }
-            customer = customerOpt.get();
+             Customer customer = lookForCustomer(user);
 
-            // Create a new order
+             // Create a new order
             RentalOrder order = rentalOrderRepository.save(RentalOrder.builder()
                  .currency(Currency.SEK)
                  .customer(customer)
@@ -181,7 +182,7 @@ public class RentalOrderService {
             if(!customerService.isCustomerAbleToPay(customer, order.getTotalAmount()) ){
                 throw new BadRequestAlertException("Order will not be created because customer " +
                     "does not have a sufficient balance. " +
-                    "Please deposit some money and try again.",  "OrderRentalService", "customernotvalid");
+                    "Please deposit some money and try again.", ORDER_RENTAL_SERVICE, "customernotvalid");
             }else {
                 customer.setCreditAmount(customer.getCreditAmount().subtract(order.getTotalAmount()));
                 customer.setBonusPoints(customer.getBonusPoints() + bonusHistory.getPoints());
@@ -205,6 +206,91 @@ public class RentalOrderService {
     }
 
 
+    @Transactional
+    public List<RentalOrderDTO> returnRentedMovieCopies(User user, ReturnRentedMovieDTO returnRentedMoviesDTO) {
+
+        List<MovieInventory> moviesToReturn = validateAndGetMoviesToReturn(returnRentedMoviesDTO);
+
+        Customer customer = lookForCustomer(user);
+
+        List<RentedCopy> copiesToReturn = rentedCopyService
+            .findByMovieInventoryIdIn(new HashSet<>(returnRentedMoviesDTO.getMovieInventoryIds()));
+
+        validateRetunedMoviesWithCustomer(customer, copiesToReturn);
+
+        Set<RentalOrder> rentalOrders = new HashSet<>();
+
+        // Customer may return movies that belong to different orders at once so we need to
+        // accumulate the total surcharges to pay across all orders;
+        BigDecimal totalSurchargesAmountToPay = new BigDecimal("0") ;
+
+
+        for(RentedCopy copy:copiesToReturn) {
+            copy.setReturnDate(Instant.now());
+            long actualRentDurationInDays = Duration.between(copy.getRentDate(), copy.getReturnDate()).toDays();
+
+            BigDecimal surcharges = copy.getMovieInventory().getMovie().getType()
+                .calculateSurchargesOnMovieReturn(copy.getPlannedRentDuration(), (int) actualRentDurationInDays);
+            copy.setExtraChargedDays(surcharges
+                .divide(copy.getMovieInventory().getMovie().getType().getPrice()).intValue());
+
+            copy.getOrder()
+                .setLateChargedAmount(copy.getOrder().getLateChargedAmount().add(surcharges));
+            copy.getOrder().setTotalAmount(copy.getOrder().getTotalAmount().add(copy.getOrder().getLateChargedAmount()));
+            copy.getOrder().setLastUpdatedAt(Instant.now());
+            totalSurchargesAmountToPay = totalSurchargesAmountToPay.add(copy.getOrder().getLateChargedAmount());
+
+            rentalOrders.add(copy.getOrder());
+
+        }
+
+
+        if(!customerService.isCustomerAbleToPay(customer, totalSurchargesAmountToPay) ){
+            throw new BadRequestAlertException("Order will not be created because customer " +
+                "does not have a sufficient balance. " +
+                "Please deposit some money and try again.",  ORDER_RENTAL_SERVICE, "customernotvalid");
+        }else {
+            log.info("Customer balance will be deduced for {} SEK in total", totalSurchargesAmountToPay);
+            customer.setCreditAmount(customer.getCreditAmount().subtract(totalSurchargesAmountToPay));
+        }
+
+
+        moviesToReturn = moviesToReturn.stream().map(movieInventory -> {
+            movieInventory.setStatus(RentalStatus.AVAILABLE);
+            movieInventory.setLastUpdatedAt(Instant.now());
+            return movieInventory;
+        }).collect(Collectors.toList());
+
+
+        movieInventoryService.saveAll(moviesToReturn);
+        log.info("Movies are updated to be available for rent {}", moviesToReturn);
+        rentedCopyService.saveAll(copiesToReturn);
+        log.info("Customer rental history has bean updated {}", copiesToReturn);
+
+        List<RentalOrder> updatedRentalOrderList = rentalOrderRepository.saveAll(new ArrayList<>(rentalOrders));
+        rentalOrderSearchRepository.saveAll(updatedRentalOrderList);
+
+
+        //we will need to get all related rented movie copies to the specific order to check if they are all returned
+        // so that we could update order status to completed
+
+        updatedRentalOrderList = updatedRentalOrderList.stream().map(order -> {
+            if(order.getRentedCopies().stream().allMatch(copy -> copy.getReturnDate() != null)){
+                order.setStatus(OrderStatus.COMPLETED);
+                order = rentalOrderRepository.save(order);
+                rentalOrderSearchRepository.save(order);
+            }
+            return order;
+        }).collect(Collectors.toList());
+
+        log.info("Movie rental copies has been returned and all orders and customer {} balance has been updated", customer);
+
+        return rentalOrderMapper.toDto(updatedRentalOrderList);
+
+    }
+
+
+
     private List<MovieInventory> validateAndGetMovieInventoryList(CreateRentalOrderDTO createRentalOrderDTO) {
 
         Set<Long> inventoryIds = createRentalOrderDTO.getOrder().keySet();
@@ -216,11 +302,52 @@ public class RentalOrderService {
 
         if(inventoryIds.size() != moviesToRent.size()){
             throw new BadRequestAlertException("Some of the provided movie ids {} are not valid or already rented, " +
-                "the order will be canceled!", "OrderRentalService", "idsnotvalid");
+                "the order will be canceled!",ORDER_RENTAL_SERVICE, "idsnotvalid");
         }
 
         return moviesToRent;
     }
 
+
+    private List<MovieInventory> validateAndGetMoviesToReturn(ReturnRentedMovieDTO returnRentedMoviesDTO) {
+
+        Set<Long> inventoryIds = new HashSet<>(returnRentedMoviesDTO.getMovieInventoryIds());
+        List<MovieInventory> moviesToReturn = movieInventoryService.findByIdIn(inventoryIds);
+
+        moviesToReturn = moviesToReturn.stream()
+            .filter(m -> m.getStatus() == RentalStatus.RENTED)
+            .collect(Collectors.toList());
+
+        if(inventoryIds.size() != moviesToReturn.size()){
+            throw new BadRequestAlertException("Some of the provided movie ids {} are not valid or available for rent, " +
+                "the return movie action will be canceled!",ORDER_RENTAL_SERVICE, "idsnotvalid");
+        }
+
+        return moviesToReturn;
+    }
+
+
+    private Customer lookForCustomer(User user){
+        log.debug("Look for the customer attached to specific user");
+        Optional<Customer> customerOpt = customerService.findOneInternal(user.getId());
+        Customer customer;
+        if(!customerOpt.isPresent()){
+            throw new BadRequestAlertException("Customer with this id does not exists!",
+                ORDER_RENTAL_SERVICE, "customernotvalid");
+        }
+        return customerOpt.get();
+
+    }
+
+
+    private boolean validateRetunedMoviesWithCustomer(Customer customer, List<RentedCopy> copies){
+
+            if(!copies.stream().allMatch(copy -> copy.getOrder().getCustomer().getId() == customer.getId()))   {
+                throw new BadRequestAlertException("Some of the returned movies does not belong to the specific customer",
+                    ORDER_RENTAL_SERVICE, "customernotvalid");
+            }
+
+            return true;
+    }
 
 }
