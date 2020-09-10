@@ -7,7 +7,7 @@
   
   https://drive.google.com/file/d/1nponNGu74Idc46ilenu8Y6wGjgayXBpB/view?usp=sharing
   
-- All api endpoints for the app are secured using JWTokens. 
+- All api endpoints for the app are secured using JWToken. 
   By default I use liquibase migration tool in combination with faker.js to seed some data in the H2 with disc persistence db on dev profile.
   H2 db will be populated with 4 users(customer) and 10 movies. Customer is just an extension to the user (one to one) relationship.
 
@@ -47,7 +47,7 @@
   This endpoint will return a jwtoken which will be used as an authentication bearer for all other API requests.
   
   ```
-  GET /api/_search/movie-inventories?joker=deep HTTP/1.1
+  GET /api/_search/movie-inventories?query=joker HTTP/1.1
   Host: localhost:8080
   Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsImF1dGgiOiJST0xFX0FETUlOLFJPTEVfVVNFUiIsImV4cCI6MTU5OTY0OTg5NX0.dIlrtTbc15T8-50nKtogTbHOKF7WKmHZtv_1InTUgL8Iudr5fD0P9TuB9JfAMlDu8MMygz83DqdZqUng-PNovw
   Content-Type: application/json
@@ -61,17 +61,17 @@
   cache-control: no-cache
   ```
   
-  - Admin users can create new users with default password: passpass. Users can crate profile on their own as well, 
+  - Admin users can create new users with default password: passpass. Users can create own profile as well, 
   but they will need to be activated using the account api.
   
-  - To document the API I use Swagger https://editor.swagger.io/. The following url could be loaded in an online swagger editor and the API with all endpoints and thair signature will be shown in the browser
+  - To document the API I have used Swagger https://editor.swagger.io/. The following url could be loaded in an online swagger editor and the API with all endpoints and their signature will be rendered in the browser
   ```
   http://localhost:8080/v2/api-docs
   ```
   
 - All business objects will expose an elastic search API to search by different attributes of an object.
 
-- Users can rent one or many movies using this endpoint:
+- Users can rent one or many movies using this endpoint: The key is movieInventoryId and the value is the planned number of days to rent
  ```
  POST /api/rental-orders HTTP/1.1
  Host: localhost:8080
@@ -138,7 +138,7 @@ cache-control: no-cache
 
 ### Elasticsearch
 
-I have decided to use Elasticsearch to enable intelligent, fast and reliable a search for all business objects in the Video Rental Store.
+I have decided to use Elasticsearch to enable intelligent, fast and reliable search for all business objects in the Video Rental Store.
 So before running the application in dev or prod mode it is a requirement to start an elasticsearch container using docker-compose script.
 Spring Data Elasticsearch is used, with the help of Spring Data Jest. Spring Data Jest which allows communication with Elasticsearch’s REST API. It disables Spring Boot’s autoconfiguration and uses its own instead.
 All package has new subpackage, called “search”, that holds all Elasticsearch repositories.
@@ -162,9 +162,6 @@ To start your application in the dev profile, run:
  mvn
  ```
  
-
-For further instructions on how to develop with JHipster, have a look at [Using JHipster in development][].
-
 ## Building for production
 
 ### Packaging as jar
